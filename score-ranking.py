@@ -45,21 +45,36 @@ if st.button("✅ 校验并生成排名"):
                 result_text += f"第 {rank} 名：{current_score}\n"
                 rows.append({"排名": rank, "分数": current_score})
 
-            st.success("数据全部合格，排名如下：")
-            st.text(result_text)
-
-            # 自动把排名结果转成 Excel（放在内存里，不自动下载）
-            df = pd.DataFrame(rows)
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-                df.to_excel(writer, index=False, sheet_name="成绩排名")
-            excel_data = buffer.getvalue()
-
-            # 显示下载按钮：用户可以选择点（下载）或不点（不下载）
-            st.info("排名结果已转为 Excel，您可以选择是否下载：")
-            st.download_button(
-                label="⬇️ 下载 Excel 文件",
-                data=excel_data,
-                file_name="成绩排名.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
+            # 数据准备完毕，开始展示
+            st.success("数据全部合格！")
+            
+            # 创建两个标签页
+            tab1, tab2 = st.tabs(["📝 文本排名", "📊 Excel 表格预览"])
+            
+            with tab1:
+                # 原来纯文本展示
+                st.text(result_text)
+                
+            with tab2:
+                # 将数据转为 DataFrame 用于表格预览
+                df = pd.DataFrame(rows)
+                # 使用 st.dataframe 显示表格，外观类似 Excel
+                st.dataframe(df, use_container_width=True, hide_index=True)
+                
+                # 尝试生成真正的 Excel 文件供下载
+                try:
+                    buffer = io.BytesIO()
+                    # 这里需要 openpyxl 库
+                    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+                        df.to_excel(writer, index=False, sheet_name="成绩排名")
+                    excel_data = buffer.getvalue()
+                    
+                    st.info("您可以在上方预览表格。如果需要保存到电脑，请点击下方按钮：")
+                    st.download_button(
+                        label="⬇️ 下载 Excel 文件",
+                        data=excel_data,
+                        file_name="成绩排名.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    )
+                except ImportError:
+                    st.error("⚠️ 缺少 openpyxl 库，暂时无法提供下载。请确保 requirements.txt 中包含 openpyxl 并重启应用。")
