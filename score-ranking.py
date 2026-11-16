@@ -1,11 +1,10 @@
-
 import streamlit as st
+import pandas as pd
+import io
 
-# 设置网页标题
 st.set_page_config(page_title="成绩排名查询系统")
 st.title("🏆 成绩排名查询系统")
 
-# 网页上的输入框
 raw_text = st.text_input("请输入查询数据（用空格隔开）：", "")
 
 if st.button("✅ 校验并生成排名"):
@@ -16,7 +15,6 @@ if st.button("✅ 校验并生成排名"):
         nums = []
         errors = []
 
-        # 校验逻辑
         for n in user_input:
             try:
                 num = float(n)
@@ -27,18 +25,17 @@ if st.button("✅ 校验并生成排名"):
             except ValueError:
                 errors.append(f"'{n}' 不是纯数字")
 
-        # 弹窗报错
         if errors:
             error_str = "，".join(errors)
             st.error(f"❌ 输入有误：{error_str}。请重新输入！")
         elif not nums:
             st.warning("没有有效的正数可以排名！")
         else:
-            # 排名逻辑
             ranking = sorted(nums, reverse=True)
             result_text = "--- 🏆 成绩排名榜 ---\n\n"
             rank = 1
             prev_score = None
+            rows = []
 
             for i in range(len(ranking)):
                 current_score = ranking[i]
@@ -46,17 +43,23 @@ if st.button("✅ 校验并生成排名"):
                     rank = i + 1
                     prev_score = current_score
                 result_text += f"第 {rank} 名：{current_score}\n"
+                rows.append({"排名": rank, "分数": current_score})
 
-            # 在网页上显示结果
             st.success("数据全部合格，排名如下：")
             st.text(result_text)
 
+            # 自动把排名结果转成 Excel（放在内存里，不自动下载）
+            df = pd.DataFrame(rows)
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+                df.to_excel(writer, index=False, sheet_name="成绩排名")
+            excel_data = buffer.getvalue()
 
-
-
-
-
-
-
-
-
+            # 显示下载按钮：用户可以选择点（下载）或不点（不下载）
+            st.info("排名结果已转为 Excel，您可以选择是否下载：")
+            st.download_button(
+                label="⬇️ 下载 Excel 文件",
+                data=excel_data,
+                file_name="成绩排名.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
